@@ -2,9 +2,16 @@ const express = require('express');
 const morgan = require('morgan');
 
 const api = require('./api');
+// const sequelize = require('./lib/sequelizePool');
+const { dropTablesAndCreate, populateDatabase } = require('./lib/sequelizeFns');
+const { sequelize } = require('./lib/sequelizePool');
 
 const app = express();
 const port = process.env.PORT || 8000;
+
+// DEV_MODE = true means tables are dropped, recreated, and filled with sample
+// data on server restart
+const DEV_MODE = true;
 
 /*
  * Morgan is a popular logger.
@@ -38,6 +45,20 @@ app.use('*', function (err, req, res, next) {
   })
 })
 
-app.listen(port, function() {
+app.listen(port, async function() {
   console.log("== Server is running on port", port);
+  try {
+    await sequelize.authenticate();
+    console.log('Connection has been established successfully.');
+
+    if (DEV_MODE) {
+      await dropTablesAndCreate();
+      console.log("Tables dropped and recreated.")
+      await populateDatabase();
+      console.log("Database populated")
+    }
+  } catch (error) {
+    console.error('Unable to connect to the database:', error);
+  }
 });
+
