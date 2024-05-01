@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { validateAgainstSchema, extractValidFields } = require('../lib/validation');
 
 const photos = require('../data/photos');
+const { Photo } = require('../lib/sequelizePool');
 
 exports.router = router;
 exports.photos = photos;
@@ -19,16 +20,15 @@ const photoSchema = {
 /*
  * Route to create a new photo.
  */
-router.post('/', function (req, res, next) {
+router.post('/', async function (req, res, next) {
   if (validateAgainstSchema(req.body, photoSchema)) {
     const photo = extractValidFields(req.body, photoSchema);
-    photo.id = photos.length;
-    photos.push(photo);
+    const newPhoto = await Photo.create(photo)
     res.status(201).json({
-      id: photo.id,
+      id: newPhoto.id,
       links: {
-        photo: `/photos/${photo.id}`,
-        business: `/businesses/${photo.businessid}`
+        photo: `/photos/${newPhoto.id}`,
+        business: `/businesses/${newPhoto.businessid}`
       }
     });
   } else {
@@ -41,10 +41,11 @@ router.post('/', function (req, res, next) {
 /*
  * Route to fetch info about a specific photo.
  */
-router.get('/:photoID', function (req, res, next) {
+router.get('/:photoID', async function (req, res, next) {
   const photoID = parseInt(req.params.photoID);
-  if (photos[photoID]) {
-    res.status(200).json(photos[photoID]);
+  const photo = await Photo.findByPk(photoID)
+  if (photo !== null) {
+    res.status(200).json(photo);
   } else {
     next();
   }
@@ -53,9 +54,11 @@ router.get('/:photoID', function (req, res, next) {
 /*
  * Route to update a photo.
  */
-router.put('/:photoID', function (req, res, next) {
+router.put('/:photoID', async function (req, res, next) {
   const photoID = parseInt(req.params.photoID);
-  if (photos[photoID]) {
+
+  const photo = await Photo.findByPk(photoID)
+  if (photo !== null) {
 
     if (validateAgainstSchema(req.body, photoSchema)) {
       /*
@@ -63,14 +66,13 @@ router.put('/:photoID', function (req, res, next) {
        * the existing photo.
        */
       const updatedPhoto = extractValidFields(req.body, photoSchema);
-      const existingPhoto = photos[photoID];
+      const existingPhoto = photo;
       if (existingPhoto && updatedPhoto.businessid === existingPhoto.businessid && updatedPhoto.userid === existingPhoto.userid) {
-        photos[photoID] = updatedPhoto;
-        photos[photoID].id = photoID;
+        await photo.update(updatedPhoto)
         res.status(200).json({
           links: {
-            photo: `/photos/${photoID}`,
-            business: `/businesses/${updatedPhoto.businessid}`
+            photo: `/photos/${photo.id}`,
+            business: `/businesses/${photo.businessid}`
           }
         });
       } else {
@@ -92,10 +94,14 @@ router.put('/:photoID', function (req, res, next) {
 /*
  * Route to delete a photo.
  */
-router.delete('/:photoID', function (req, res, next) {
+router.delete('/:photoID', async function (req, res, next) {
   const photoID = parseInt(req.params.photoID);
-  if (photos[photoID]) {
-    photos[photoID] = null;
+  const affectedCount = await Photo.destroy({
+    where: {
+      id: photoID
+    }
+  })
+  if (affectedCount > 0) {
     res.status(204).end();
   } else {
     next();

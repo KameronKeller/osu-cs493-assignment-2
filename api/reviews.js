@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { validateAgainstSchema, extractValidFields } = require('../lib/validation');
 
 const reviews = require('../data/reviews');
+const { Review } = require('../lib/sequelizePool');
 
 exports.router = router;
 exports.reviews = reviews;
@@ -21,32 +22,29 @@ const reviewSchema = {
 /*
  * Route to create a new review.
  */
-router.post('/', function (req, res, next) {
+router.post('/', async function (req, res, next) {
   if (validateAgainstSchema(req.body, reviewSchema)) {
 
     const review = extractValidFields(req.body, reviewSchema);
 
     /*
-     * Make sure the user is not trying to review the same business twice.
-     */
-    const userReviewedThisBusinessAlready = reviews.some(
-      existingReview => existingReview
-        && existingReview.ownerid === review.ownerid
-        && existingReview.businessid === review.businessid
-    );
-
-    if (userReviewedThisBusinessAlready) {
-      res.status(403).json({
-        error: "User has already posted a review of this business"
+    * Make sure the user is not trying to review the same business twice.
+    */
+     const existingReview = await Review.findOne({
+       where: { userid: review.userid, businessid: review.businessid },
       });
-    } else {
-      review.id = reviews.length;
-      reviews.push(review);
+      
+      if (existingReview !== null ) {
+        res.status(403).json({
+          error: "User has already posted a review of this business"
+        });
+      } else {
+      const newReview = await Review.create(review)
       res.status(201).json({
-        id: review.id,
+        id: newReview.id,
         links: {
-          review: `/reviews/${review.id}`,
-          business: `/businesses/${review.businessid}`
+          review: `/reviews/${newReview.id}`,
+          business: `/businesses/${newReview.businessid}`
         }
       });
     }
@@ -61,10 +59,11 @@ router.post('/', function (req, res, next) {
 /*
  * Route to fetch info about a specific review.
  */
-router.get('/:reviewID', function (req, res, next) {
+router.get('/:reviewID', async function (req, res, next) {
   const reviewID = parseInt(req.params.reviewID);
-  if (reviews[reviewID]) {
-    res.status(200).json(reviews[reviewID]);
+  const review = await Review.findByPk(reviewID)
+  if (review !== null) {
+    res.status(200).json(review);
   } else {
     next();
   }
@@ -73,9 +72,11 @@ router.get('/:reviewID', function (req, res, next) {
 /*
  * Route to update a review.
  */
-router.put('/:reviewID', function (req, res, next) {
+router.put('/:reviewID', async function (req, res, next) {
   const reviewID = parseInt(req.params.reviewID);
-  if (reviews[reviewID]) {
+
+  const review = await Review.findByPk(reviewID);
+  if (review !== null) {
 
     if (validateAgainstSchema(req.body, reviewSchema)) {
       /*
@@ -83,14 +84,15 @@ router.put('/:reviewID', function (req, res, next) {
        * the existing review.
        */
       let updatedReview = extractValidFields(req.body, reviewSchema);
-      let existingReview = reviews[reviewID];
+      let existingReview = review;
       if (updatedReview.businessid === existingReview.businessid && updatedReview.userid === existingReview.userid) {
-        reviews[reviewID] = updatedReview;
-        reviews[reviewID].id = reviewID;
+        // reviews[reviewID] = updatedReview;
+        // reviews[reviewID].id = reviewID;
+        await review.update(updatedReview)
         res.status(200).json({
           links: {
-            review: `/reviews/${reviewID}`,
-            business: `/businesses/${updatedReview.businessid}`
+            review: `/reviews/${review.id}`,
+            business: `/businesses/${review.businessid}`
           }
         });
       } else {
@@ -112,10 +114,14 @@ router.put('/:reviewID', function (req, res, next) {
 /*
  * Route to delete a review.
  */
-router.delete('/:reviewID', function (req, res, next) {
+router.delete('/:reviewID', async function (req, res, next) {
   const reviewID = parseInt(req.params.reviewID);
-  if (reviews[reviewID]) {
-    reviews[reviewID] = null;
+  const affectedCount = await Review.destroy({
+    where: {
+      id: reviewID
+    }
+  })
+  if (affectedCount > 0) {
     res.status(204).end();
   } else {
     next();
