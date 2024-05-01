@@ -4,7 +4,7 @@ const { validateAgainstSchema, extractValidFields } = require('../lib/validation
 const businesses = require('../data/businesses');
 const { reviews } = require('./reviews');
 const { photos } = require('./photos');
-const { Business } = require('../lib/sequelizePool');
+const { Business, Review, Photo } = require('../lib/sequelizePool');
 
 exports.router = router;
 exports.businesses = businesses;
@@ -38,7 +38,11 @@ router.get('/', async function (req, res) {
   const numPerPage = 10;
   const { count, rows } = await Business.findAndCountAll({
     limit: numPerPage,
-    offset: page
+    offset: page,
+    include: [
+     { model: Review, required: false },
+     { model: Photo, required: false },
+    ]
   });
   const lastPage = Math.ceil(count / numPerPage);
   page = page > lastPage ? lastPage : page;
@@ -97,19 +101,13 @@ router.post('/', async function (req, res, next) {
 /*
  * Route to fetch info about a specific business.
  */
-router.get('/:businessid', function (req, res, next) {
+router.get('/:businessid', async function (req, res, next) {
   const businessid = parseInt(req.params.businessid);
-  if (businesses[businessid]) {
-    /*
-     * Find all reviews and photos for the specified business and create a
-     * new object containing all of the business data, including reviews and
-     * photos.
-     */
-    const business = {
-      reviews: reviews.filter(review => review && review.businessid === businessid),
-      photos: photos.filter(photo => photo && photo.businessid === businessid)
-    };
-    Object.assign(business, businesses[businessid]);
+  const business = await Business.findByPk(businessid, {include: [
+    { model: Review, required: false },
+    { model: Photo, required: false },
+   ]});
+  if (business !== null) {
     res.status(200).json(business);
   } else {
     next();
