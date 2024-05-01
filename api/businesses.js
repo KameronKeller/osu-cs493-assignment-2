@@ -82,8 +82,6 @@ router.get('/', async function (req, res) {
 router.post('/', async function (req, res, next) {
   if (validateAgainstSchema(req.body, businessSchema)) {
     const business = extractValidFields(req.body, businessSchema);
-    // business.id = businesses.length;
-    // businesses.push(business);
     const newBusiness = await Business.create(business)
     res.status(201).json({
       id: newBusiness.id,
@@ -121,7 +119,7 @@ router.put('/:businessid', async function (req, res, next) {
   const businessid = parseInt(req.params.businessid);
   let affectedCount;
   if (validateAgainstSchema(req.body, businessSchema)) {
-    affectedCount = await Business.update(req.body, {
+    [affectedCount] = await Business.update(req.body, {
       where: {
         id: businessid
       }
@@ -131,7 +129,7 @@ router.put('/:businessid', async function (req, res, next) {
       error: "Request body is not a valid business object"
     });
   }
-  if (affectedCount[0] > 0) {
+  if (affectedCount > 0) {
     res.status(200).json({
       links: {
         business: `/businesses/${businessid}`
@@ -145,10 +143,14 @@ router.put('/:businessid', async function (req, res, next) {
 /*
  * Route to delete a business.
  */
-router.delete('/:businessid', function (req, res, next) {
+router.delete('/:businessid', async function (req, res, next) {
   const businessid = parseInt(req.params.businessid);
-  if (businesses[businessid]) {
-    businesses[businessid] = null;
+  const affectedCount = await Business.destroy({
+    where: {
+      id: businessid
+    }
+  })
+  if (affectedCount > 0) {
     res.status(204).end();
   } else {
     next();
