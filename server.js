@@ -13,6 +13,9 @@ const port = process.env.PORT || 8000;
 // data on server restart
 const DEV_MODE = true;
 
+// populate database with fake data when in dev mode
+const FAKE_DATA = false;
+
 /*
  * Morgan is a popular logger.
  */
@@ -20,6 +23,7 @@ app.use(morgan('dev'));
 
 app.use(express.json());
 app.use(express.static('public'));
+app.disable('etag');
 
 /*
  * All routes for the API are written in modules in the api/ directory.  The
@@ -54,11 +58,14 @@ app.listen(port, async function() {
     if (DEV_MODE) {
       await dropTablesAndCreate();
       console.log("Tables dropped and recreated.")
-      await populateDatabase();
-      console.log("Database populated")
+      if (FAKE_DATA) {
+        await populateDatabase();
+        console.log("Database populated");
+      }
     }
   } catch (error) {
     console.error('Unable to connect to the database:', error);
   }
 });
 
+module.exports = app;
