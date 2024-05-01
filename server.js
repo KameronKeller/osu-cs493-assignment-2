@@ -14,7 +14,7 @@ const port = process.env.PORT || 8000;
 const DEV_MODE = true;
 
 // populate database with fake data when in dev mode
-const FAKE_DATA = false;
+const FAKE_DATA = true;
 
 /*
  * Morgan is a popular logger.
