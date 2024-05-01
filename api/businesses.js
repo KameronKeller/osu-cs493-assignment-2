@@ -4,6 +4,7 @@ const { validateAgainstSchema, extractValidFields } = require('../lib/validation
 const businesses = require('../data/businesses');
 const { reviews } = require('./reviews');
 const { photos } = require('./photos');
+const { Business } = require('../lib/sequelizePool');
 
 exports.router = router;
 exports.businesses = businesses;
@@ -28,25 +29,21 @@ const businessSchema = {
 /*
  * Route to return a list of businesses.
  */
-router.get('/', function (req, res) {
-
+router.get('/', async function (req, res) {
   /*
-   * Compute page number based on optional query string parameter `page`.
-   * Make sure page is within allowed bounds.
-   */
+  * Compute page number based on optional query string parameter `page`.
+  * Make sure page is within allowed bounds.
+  */
   let page = parseInt(req.query.page) || 1;
   const numPerPage = 10;
-  const lastPage = Math.ceil(businesses.length / numPerPage);
+  const { count, rows } = await Business.findAndCountAll({
+    limit: numPerPage,
+    offset: page
+  });
+  const lastPage = Math.ceil(count / numPerPage);
   page = page > lastPage ? lastPage : page;
   page = page < 1 ? 1 : page;
 
-  /*
-   * Calculate starting and ending indices of businesses on requested page and
-   * slice out the corresponsing sub-array of busibesses.
-   */
-  const start = (page - 1) * numPerPage;
-  const end = start + numPerPage;
-  const pageBusinesses = businesses.slice(start, end);
 
   /*
    * Generate HATEOAS links for surrounding pages.
@@ -65,7 +62,7 @@ router.get('/', function (req, res) {
    * Construct and send response.
    */
   res.status(200).json({
-    businesses: pageBusinesses,
+    businesses: rows,
     pageNumber: page,
     totalPages: lastPage,
     pageSize: numPerPage,
@@ -78,15 +75,16 @@ router.get('/', function (req, res) {
 /*
  * Route to create a new business.
  */
-router.post('/', function (req, res, next) {
+router.post('/', async function (req, res, next) {
   if (validateAgainstSchema(req.body, businessSchema)) {
     const business = extractValidFields(req.body, businessSchema);
-    business.id = businesses.length;
-    businesses.push(business);
+    // business.id = businesses.length;
+    // businesses.push(business);
+    const newBusiness = await Business.create(business)
     res.status(201).json({
-      id: business.id,
+      id: newBusiness.id,
       links: {
-        business: `/businesses/${business.id}`
+        business: `/businesses/${newBusiness.id}`
       }
     });
   } else {
