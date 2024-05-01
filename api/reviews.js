@@ -4,11 +4,9 @@ const {
   extractValidFields,
 } = require("../lib/validation");
 
-const reviews = require("../data/reviews");
 const { Review } = require("../lib/sequelizePool");
 
 exports.router = router;
-exports.reviews = reviews;
 
 /*
  * Schema describing required/optional fields of a review object.

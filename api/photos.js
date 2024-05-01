@@ -4,11 +4,9 @@ const {
   extractValidFields,
 } = require("../lib/validation");
 
-const photos = require("../data/photos");
 const { Photo } = require("../lib/sequelizePool");
 
 exports.router = router;
-exports.photos = photos;
 
 /*
  * Schema describing required/optional fields of a photo object.

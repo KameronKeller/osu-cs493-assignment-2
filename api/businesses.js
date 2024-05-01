@@ -4,11 +4,9 @@ const {
   extractValidFields,
 } = require("../lib/validation");
 
-const businesses = require("../data/businesses");
 const { Business, Review, Photo } = require("../lib/sequelizePool");
 
 exports.router = router;
-exports.businesses = businesses;
 
 /*
  * Schema describing required/optional fields of a business object.
@@ -70,7 +68,7 @@ router.get("/", async function (req, res) {
     pageNumber: page,
     totalPages: lastPage,
     pageSize: numPerPage,
-    totalCount: businesses.length,
+    totalCount: count,
     links: links,
   });
 });
