@@ -117,24 +117,26 @@ router.get('/:businessid', async function (req, res, next) {
 /*
  * Route to replace data for a business.
  */
-router.put('/:businessid', function (req, res, next) {
+router.put('/:businessid', async function (req, res, next) {
   const businessid = parseInt(req.params.businessid);
-  if (businesses[businessid]) {
-
-    if (validateAgainstSchema(req.body, businessSchema)) {
-      businesses[businessid] = extractValidFields(req.body, businessSchema);
-      businesses[businessid].id = businessid;
-      res.status(200).json({
-        links: {
-          business: `/businesses/${businessid}`
-        }
-      });
-    } else {
-      res.status(400).json({
-        error: "Request body is not a valid business object"
-      });
-    }
-
+  let affectedCount;
+  if (validateAgainstSchema(req.body, businessSchema)) {
+    affectedCount = await Business.update(req.body, {
+      where: {
+        id: businessid
+      }
+    })
+  } else {
+    res.status(400).json({
+      error: "Request body is not a valid business object"
+    });
+  }
+  if (affectedCount[0] > 0) {
+    res.status(200).json({
+      links: {
+        business: `/businesses/${businessid}`
+      }
+    });
   } else {
     next();
   }
