@@ -23,7 +23,6 @@ app.use(morgan('dev'));
 
 app.use(express.json());
 app.use(express.static('public'));
-app.disable('etag');
 
 /*
  * All routes for the API are written in modules in the api/ directory.  The
