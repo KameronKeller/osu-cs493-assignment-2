@@ -9,8 +9,7 @@ const { sequelize } = require("./lib/sequelizePool");
 const app = express();
 const port = process.env.PORT || 8000;
 
-// DEV_MODE = true means tables are dropped, recreated, and filled with sample
-// data on server restart
+// DEV_MODE = true means tables are dropped and recreated on server restart
 const DEV_MODE = true;
 
 // populate database with fake data when in dev mode
@@ -52,14 +51,16 @@ app.listen(port, async function () {
   console.log("== Server is running on port", port);
   try {
     await sequelize.authenticate();
-    console.log("Connection has been established successfully.");
+    console.log("Connection to database has been established successfully.");
 
     if (DEV_MODE) {
       await dropTablesAndCreate();
-      console.log("Tables dropped and recreated.");
+      console.log(
+        `DEV_MODE: ${DEV_MODE}: Tables dropped and recreated, disable this flag in server.js to prevent tables from being dropped`
+      );
       if (FAKE_DATA) {
         await populateDatabase();
-        console.log("Database populated");
+        console.log(`DEV_MODE: ${DEV_MODE}: Database populated with mock data`);
       }
     }
   } catch (error) {
