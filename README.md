@@ -1,5 +1,12 @@
 # Assignment 2
 
+## Starting the Program
+```
+docker compose up
+```
+
+## Assignment Description
+
 The goal of this assignment is to start using a real database to store
 application data.  The assignment requirements are listed below.
 
